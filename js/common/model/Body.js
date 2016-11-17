@@ -56,13 +56,14 @@ define( function( require ) {
    * @param {Object} [options]
    * @constructor
    */
-  function Body( name, bodyConfiguration, color, highlight, renderer, labelAngle, tickValue, tickLabel, parameterList, options ) {
+  function Body( name, bodyConfiguration, color, highlight, renderer, labelAngle, tickValue, tickLabel, parameterList, transformProperty, options ) {
 
     options = _.extend( {
       pathLengthBuffer: 0, // a buffer to alter the path trace if necessary
       diameterScale: 1, // scale factor applied to the diameter
       massSettable: true, // can the mass of this body be set by the control panel?
-      massReadoutBelow: true // should the mass label appear below the body to prevent occlusion?
+      massReadoutBelow: true, // should the mass label appear below the body to prevent occlusion?
+      orbitalCenter: new Vector2( 0, 0 ) // orbital center for the body - (0,0) for most
     }, options );
 
     var diameter = ( bodyConfiguration.radius * 2 ) * options.diameterScale;
@@ -90,6 +91,8 @@ define( function( require ) {
 
     // @public - total length of the current path
     this.pathLength = 0;
+
+    this.modelPathLength = 0;
 
     // True if the mass readout should appear below the body (so that readouts don't overlap too much),
     // in the model for convenience since the body type determines where the mass readout should appear
@@ -154,6 +157,28 @@ define( function( require ) {
     var self = this;
     this.collidedProperty.onValue( true, function() {
       self.clockTicksSinceExplosionProperty.set( 0 );
+    } );
+
+    transformProperty.link( function( transform ) {
+
+      var initialPosition = self.positionProperty.initialValue.minus( options.orbitalCenter );
+
+      var distToCenter = initialPosition.magnitude();
+
+      if ( distToCenter < 1000 ) {
+        self.maxPathLength = 140000; // some large number here
+      }
+      else {
+        var pathLengthBuffer = 0;
+        if ( self.pathLengthBuffer > 0 ) {
+          pathLengthBuffer = self.pathLengthBuffer;
+        }
+
+        console.log( pathLengthBuffer );
+        var maxPathLength = 2 * Math.PI * distToCenter * 0.85 + pathLengthBuffer;
+        self.maxPathLength = maxPathLength;
+      }
+
     } );
   }
 
@@ -249,6 +274,25 @@ define( function( require ) {
       var pathPoint = this.positionProperty.get();
       this.path.push( pathPoint );
       this.pointAddedEmitter.emit2( pathPoint, this.name );
+
+      // get the previous path point and add the distance to the tracked length
+      if ( this.path.length > 2 ) {
+        var difference = this.path[ this.path.length - 1 ].minus( this.path[ this.path.length - 2 ] );
+        var addedMagnitude = difference.magnitude();
+
+        this.modelPathLength += addedMagnitude;
+      }
+
+      while ( this.modelPathLength > this.maxPathLength ) {
+        var loss = this.path[ 1 ].minus( this.path[ 0 ] );
+        var lossMagnitude = loss.magnitude();
+
+        this.path.shift();
+        this.pointRemovedEmitter.emit2( this.name );
+
+        this.modelPathLength -= lossMagnitude;
+      }
+
     },
 
     /**
@@ -259,6 +303,7 @@ define( function( require ) {
     clearPath: function() {
       this.path = [];
       this.pathLength = 0;
+      this.modelPathLength = 0;
       this.clearedEmitter.emit1( this.name );
     },
 

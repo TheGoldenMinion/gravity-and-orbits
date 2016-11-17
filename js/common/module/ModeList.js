@@ -109,13 +109,12 @@ define( function( require ) {
    * @constructor
    */
   function ModeListModule( parameterList, sunEarth, sunEarthMoon, earthMoon, earthSpaceStation, options ) {
-
     options = _.extend( {
       adjustMoonPathLength: false // increase the moon path so that it matches other traces at default settings
     }, options );
 
     // non-static inner class: SpaceStation
-    function SpaceStation( earthSpaceStation ) {
+    function SpaceStation( earthSpaceStation, transformProperty ) {
       Body.call(
         this,
         GAOBodiesEnum.SATELLITE,
@@ -127,6 +126,7 @@ define( function( require ) {
         earthSpaceStation.spaceStation.mass,
         spaceStationString,
         parameterList,
+        transformProperty,
         { diameterScale: 1000 }
       );
     }
@@ -134,12 +134,13 @@ define( function( require ) {
     inherit( Body, SpaceStation );
 
     // non-static inner class: Moon
-    function Moon( massSettable, massReadoutBelow, body, options ) {
+    function Moon( massSettable, massReadoutBelow, body, transformProperty, options ) {
 
       options = _.extend( {
         pathLengthBuffer: 0, // adjustment to moon path length so that it matches other traces at default settings
         massSettable: massSettable,
-        massReadoutBelow: massReadoutBelow
+        massReadoutBelow: massReadoutBelow,
+        orbitalCenter: new Vector2( 0, 0 )
       }, options );
 
       Body.call(
@@ -153,13 +154,14 @@ define( function( require ) {
         body.mass,
         ourMoonString,
         parameterList,
+        transformProperty,
         options );
     }
 
     inherit( Body, Moon );
 
     // non-static inner class: Earth
-    function Earth( body ) {
+    function Earth( body, transformProperty ) {
       Body.call(
         this,
         GAOBodiesEnum.PLANET,
@@ -170,13 +172,14 @@ define( function( require ) {
         ( -Math.PI / 4 ),
         body.mass,
         earthString,
-        parameterList );
+        parameterList,
+        transformProperty );
     }
 
     inherit( Body, Earth );
 
     // non-static inner class: Sun
-    function Sun( body ) {
+    function Sun( body, transformProperty ) {
       Body.call(
         this,
         GAOBodiesEnum.STAR,
@@ -187,7 +190,8 @@ define( function( require ) {
         ( -Math.PI / 4 ),
         body.mass,
         ourSunString,
-        parameterList );
+        parameterList,
+        transformProperty );
       this.body = body;
     }
 
@@ -224,8 +228,9 @@ define( function( require ) {
       new Vector2( 0, 0 ),
       parameterList ) );
 
-    this.modes[ 0 ].addBody( new Sun( sunEarth.sun ) );
-    this.modes[ 0 ].addBody( new Earth( sunEarth.earth ) );
+    var transformProperty0 = this.modes[ 0 ].transformProperty;
+    this.modes[ 0 ].addBody( new Sun( sunEarth.sun, transformProperty0 ) );
+    this.modes[ 0 ].addBody( new Earth( sunEarth.earth, transformProperty0 ) );
 
     this.modes.push( new GravityAndOrbitsMode(
       sunEarthMoon.forceScale,
@@ -246,11 +251,13 @@ define( function( require ) {
     // increase moon path length so that it fades away with other bodies
     // in model coordinates (at default orbit) 
     var pathLengthBuffer = options.adjustMoonPathLength ? sunEarthMoon.moon.x / 2 : 0;
-    this.modes[ 1 ].addBody( new Sun( sunEarthMoon.sun ) );
-    this.modes[ 1 ].addBody( new Earth( sunEarthMoon.earth ) );
+    var transformProperty1 = this.modes[ 1 ].transformProperty;
+    this.modes[ 1 ].addBody( new Sun( sunEarthMoon.sun, transformProperty1 ) );
+    this.modes[ 1 ].addBody( new Earth( sunEarthMoon.earth, transformProperty1 ) );
     this.modes[ 1 ].addBody( new Moon( // no room for the slider
       false, false, // so it doesn't intersect with earth mass readout
-      sunEarthMoon.moon, {
+      sunEarthMoon.moon, 
+      transformProperty1, {
         pathLengthBuffer: pathLengthBuffer
       } ) );
 
@@ -271,8 +278,11 @@ define( function( require ) {
       new Vector2( earthMoon.earth.x, 0 ),
       parameterList ) );
 
-    this.modes[ 2 ].addBody( new Earth( earthMoon.earth ) );
-    this.modes[ 2 ].addBody( new Moon( true, true, earthMoon.moon ) );
+    var transformProperty2 = this.modes[ 2 ].transformProperty;
+    this.modes[ 2 ].addBody( new Earth( earthMoon.earth, transformProperty2 ) );
+    this.modes[ 2 ].addBody( new Moon( true, true, earthMoon.moon, transformProperty2, {
+      orbitalCenter: new Vector2( earthMoon.earth.x, earthMoon.earth.y ) // moon orbit is relative to earth
+    } ) );
 
     var spaceStationMassReadoutFactory = function( bodyNode, visibleProperty ) {
       return new SpaceStationMassReadoutNode( bodyNode, visibleProperty );
@@ -294,8 +304,9 @@ define( function( require ) {
       new Vector2( earthSpaceStation.earth.x, 0 ),
       parameterList ) );
 
-    this.modes[ 3 ].addBody( new Earth( earthSpaceStation.earth ) );
-    this.modes[ 3 ].addBody( new SpaceStation( earthSpaceStation ) );
+    var transformProperty3 = this.modes[ 3 ].transformProperty;
+    this.modes[ 3 ].addBody( new Earth( earthSpaceStation.earth, transformProperty3 ) );
+    this.modes[ 3 ].addBody( new SpaceStation( earthSpaceStation, transformProperty3 ) );
   }
 
   gravityAndOrbits.register( 'ModeList.ModeListModule', ModeListModule );

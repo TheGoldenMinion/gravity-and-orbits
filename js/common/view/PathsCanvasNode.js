@@ -16,7 +16,6 @@ define( function( require ) {
   // modules
   var inherit = require( 'PHET_CORE/inherit' );
   var CanvasNode = require( 'SCENERY/nodes/CanvasNode' );
-  var Util = require( 'DOT/Util' );
   var gravityAndOrbits = require( 'GRAVITY_AND_ORBITS/gravityAndOrbits' );
 
   // constants
@@ -45,6 +44,9 @@ define( function( require ) {
     var self = this;
     var i;
 
+    // @private
+    this.canvasBounds = canvasBounds;
+
     // @private - a map tracking each body and its associated points
     this.namedPoints = {}; // @private
     for ( i = 0; i < bodies.length; i++ ) {
@@ -61,22 +63,22 @@ define( function( require ) {
     transformProperty.link( function( transform ) {
       for ( var i = 0; i < bodies.length; i++ ) {
         var body = bodies[ i ];
-        var initialPosition = transform.modelToViewPosition( body.positionProperty.initialValue );
-        var distToCenter = canvasBounds.center.minus( initialPosition ).magnitude();
+        // var initialPosition = transform.modelToViewPosition( body.positionProperty.initialValue );
+        // var distToCenter = canvasBounds.center.minus( initialPosition ).magnitude();
 
-        // if the initial position is too close to the center,
-        // default path length is the width of the bounds
-        if ( distToCenter < 1 ) {
-          body.maxPathLength = canvasBounds.width;
-        }
-        else {
-          var pathLengthBuffer = 0;
-          if ( body.pathLengthBuffer > 0 ) {
-            pathLengthBuffer = transform.modelToViewDeltaX( body.pathLengthBuffer );
-          }
-          var maxPathLength = 2 * Math.PI * distToCenter * 0.85 + pathLengthBuffer;
-          body.maxPathLength = maxPathLength;
-        }
+        // // if the initial position is too close to the center,
+        // // default path length is the width of the bounds
+        // if ( distToCenter < 1 ) {
+        //   body.maxPathLength = canvasBounds.width;
+        // }
+        // else {
+        //   var pathLengthBuffer = 0;
+        //   if ( body.pathLengthBuffer > 0 ) {
+        //     pathLengthBuffer = transform.modelToViewDeltaX( body.pathLengthBuffer );
+        //   }
+        //   var maxPathLength = 2 * Math.PI * distToCenter * 0.85 + pathLengthBuffer;
+        //   body.maxPathLength = maxPathLength;
+        // }
 
         // when the transform changes, we want to re-transform all points in a body
         // path and then re paint the canvas
@@ -162,84 +164,135 @@ define( function( require ) {
      * @param {CanvasRenderingContext2D} context
      */
     paintCanvas: function( context ) {
-      var j;
+      // var j;
+
+      var bounds = this.canvasBounds;
+      context.clearRect( bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight() );
 
       // draw the path for each body one by one
       for ( var i = 0; i < this.bodies.length; i++ ) {
         var body = this.bodies[ i ];
         var points = this.namedPoints[ body.name ].points;
 
-        var maxPathLength = body.maxPathLength;
-        var fadePathLength = body.maxPathLength * 0.15; // fade length is ~15% of the path
+        // var maxPathLength = body.maxPathLength;
+        // var fadePathLength = body.maxPathLength * 0.15; // fade length is ~15% of the path
 
+        // context.strokeStyle = body.color.toCSS();
+        // context.lineWidth = STROKE_WIDTH;
+        // context.lineCap = 'round';
+        // context.lineJoin = 'round';
+
+        if ( points.length > 0 ) {
+          context.moveTo( points[ 0 ].x, points[ 0 ].y );
+        }
+
+        var j = 0;
+        // if ( body.modelPathLength > body.maxPathLength * 0.90 ) {
+
+        //   // fade out the percentLarger portion of the path
+        //   var percentLarger = 1 - ( body.maxPathLength * 0.90 ) / body.modelPathLength;
+
+        //   // index where the path should be fully opaque
+        //   var opaquePoint = Math.floor( percentLarger * body.path.length );
+
+        //   // index where the path should be fully transparent
+        //   var transparentPoint = 0;
+
+        //   for ( var k = 0; k < opaquePoint; k++ ) {
+
+        //     // fade out a little bit each segment
+        //     var alpha = Util.linear( opaquePoint, transparentPoint, 1, 0, k );
+
+        //     // format without Color to avoid unnecessary allocation
+        //     var baseColor = body.color;
+        //     var fade = 'rgba( ' + baseColor.r + ', ' + baseColor.g + ', ' + baseColor.b + ', ' + alpha + ' )';
+
+        //     context.beginPath();
+        //     context.strokeStyle = fade;
+        //     context.lineWidth = STROKE_WIDTH;
+        //     context.lineCap = 'round';
+        //     context.lineJoin = 'round';
+        //     context.moveTo( points[ k ].x, points[ k ].y );
+        //     context.lineTo( points[ k + 1 ].x, points[ k + 1 ].y );
+        //     context.stroke();
+
+        //     // incrememnt the path counter as we step through transparent segments
+        //     j++
+        //   }
+        // }
+
+
+        // draw the remaining path in whight
+        context.beginPath();
         context.strokeStyle = body.color.toCSS();
         context.lineWidth = STROKE_WIDTH;
         context.lineCap = 'round';
         context.lineJoin = 'round';
-        context.beginPath();
 
-        // Create and render the solid part as a path. New points are added at the tail of the list,
-        // so easiest to render backwards for fade-out.
-        if ( points.length > 0 ) {
-          context.moveTo( points[ points.length - 1 ].x, points[ points.length - 1 ].y );
-        }
-
-        j = points.length - 1;
-        body.pathLength = 0;
-        var segDifX;
-        var segDifY;
-        var segLength;
-        while ( body.pathLength < maxPathLength - fadePathLength && j > 0 ) {
+        while( j < points.length - 1 ) {
           context.lineTo( points[ j ].x, points[ j ].y );
-          if ( j > 1 ) {
-            // increment the path length by the length of the added segment
-            segDifX = points[ j ].x - points[ j - 1 ].x;
-            segDifY = points[ j ].y - points[ j - 1 ].y;
-
-            // avoid using vector2 to prevent excess object allocation
-            segLength = Math.sqrt( segDifX * segDifX + segDifY * segDifY );
-            body.pathLength += segLength;
-          }
-          j--;
+          j++;
         }
         context.stroke();
 
-        // Draw the faded out part
-        context.lineCap = 'butt';
-        var faded = body.color;
+        console.log( points.length );
 
-        while ( body.pathLength < maxPathLength && j > 0 ) {
-          assert && assert( body.pathLength > maxPathLength - fadePathLength, 'the path length is too small to start fading' );
+        // j = points.length - 1;
+        // body.pathLength = 0;
+        // var segDifX;
+        // var segDifY;
+        // var segLength;
+        // while ( body.pathLength < maxPathLength - fadePathLength && j > 0 ) {
+        //   context.lineTo( points[ j ].x, points[ j ].y );
+        //   if ( j > 1 ) {
+        //     // increment the path length by the length of the added segment
+        //     segDifX = points[ j ].x - points[ j - 1 ].x;
+        //     segDifY = points[ j ].y - points[ j - 1 ].y;
 
-          // fade out a little bit each segment
-          var alpha = Util.linear( maxPathLength - fadePathLength, maxPathLength, 1 , 0, body.pathLength );
+        //     // avoid using vector2 to prevent excess object allocation
+        //     segLength = Math.sqrt( segDifX * segDifX + segDifY * segDifY );
+        //     body.pathLength += segLength;
+        //   }
+        //   j--;
+        // }
+        // context.stroke();
 
-          // format without Color to avoid unnecessary allocation
-          var fade = 'rgba( ' + faded.r + ', ' + faded.g + ', ' + faded.b + ', ' + alpha + ' )';
+        // // Draw the faded out part
+        // context.lineCap = 'butt';
+        // var faded = body.color;
 
-          context.beginPath();
-          context.strokeStyle = fade;
-          context.moveTo( points[ j + 1 ].x, points[ j + 1 ].y );
-          context.lineTo( points[ j ].x, points[ j ].y );
-          context.stroke();
+        // while ( body.pathLength < maxPathLength && j > 0 ) {
+        //   assert && assert( body.pathLength > maxPathLength - fadePathLength, 'the path length is too small to start fading' );
 
-          // increment the path length by the length of the added segment
-          segDifX = points[ j ].x - points[ j - 1 ].x;
-          segDifY = points[ j ].y - points[ j - 1 ].y;
+        //   // fade out a little bit each segment
+        //   var alpha = Util.linear( maxPathLength - fadePathLength, maxPathLength, 1 , 0, body.pathLength );
 
-          // avoid using vector2 to prevent excess object allocation
-          segLength = Math.sqrt( segDifX * segDifX + segDifY * segDifY );
-          body.pathLength += segLength;
-          j--;
-        }
+        //   // format without Color to avoid unnecessary allocation
+        //   var fade = 'rgba( ' + faded.r + ', ' + faded.g + ', ' + faded.b + ', ' + alpha + ' )';
 
-        if ( body.pathLength > maxPathLength ) {
-          while ( j >= 0 ) {
-            body.path.shift();
-            points.shift();
-            j--;
-          }
-        }
+        //   context.beginPath();
+        //   context.strokeStyle = fade;
+        //   context.moveTo( points[ j + 1 ].x, points[ j + 1 ].y );
+        //   context.lineTo( points[ j ].x, points[ j ].y );
+        //   context.stroke();
+
+        //   // increment the path length by the length of the added segment
+        //   segDifX = points[ j ].x - points[ j - 1 ].x;
+        //   segDifY = points[ j ].y - points[ j - 1 ].y;
+
+        //   // avoid using vector2 to prevent excess object allocation
+        //   segLength = Math.sqrt( segDifX * segDifX + segDifY * segDifY );
+        //   body.pathLength += segLength;
+        //   j--;
+        // }
+
+        // if ( body.pathLength > maxPathLength ) {
+        //   while ( j >= 0 ) {
+        //     body.path.shift();
+        //     points.shift();
+        //     j--;
+        //   }
+        // }
       }
     }
   } );
