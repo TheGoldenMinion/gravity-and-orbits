@@ -1,5 +1,5 @@
 {
-  "comment": "# gravity-and-orbits 1.2.0-pdomTransform.0 Wed Sep 26 2018 14:39:09 GMT-0400 (Eastern Daylight Time)",
+  "comment": "# gravity-and-orbits 1.2.0-pdomTransform.1 Wed Sep 26 2018 14:46:12 GMT-0400 (Eastern Daylight Time)",
   "assert": {
     "sha": "928741cfc8fe804334d5b35292140314511f8678",
     "branch": "master"
@@ -21,7 +21,7 @@
     "branch": "master"
   },
   "gravity-and-orbits": {
-    "sha": "e2bc84a264a793ce056df6c8e57bbbd3ccc301a5",
+    "sha": "ac7033fe0aee8d082476b996d8efa5c39f5d1bc4",
     "branch": "pdomTransform"
   },
   "joist": {
