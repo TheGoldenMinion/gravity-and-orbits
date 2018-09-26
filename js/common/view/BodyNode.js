@@ -35,7 +35,14 @@ define( function( require ) {
    * @constructor
    */
   function BodyNode( body, labelAngle, playButtonPressedProperty, mode ) {
-    Node.call( this, { pickable: true, cursor: 'pointer' } );
+    Node.call( this, { 
+      pickable: true, cursor: 'pointer',
+
+      // a11y - add accessible content that would be transformed for mobile a11y, see
+      // https://github.com/phetsims/gravity-and-orbits/issues/272
+      tagName: 'button',
+      accessibleName: 'Grab Planet'
+    } );
 
     var modelBoundsProperty = mode.modelBoundsProperty;
     var clock = mode.getClock();
