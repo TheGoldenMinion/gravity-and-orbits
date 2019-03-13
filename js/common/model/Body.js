@@ -61,13 +61,13 @@ define( function( require ) {
 
     options = _.extend( {
       pathLengthBuffer: 0, // a buffer to alter the path trace if necessary
-      diameterScale: 1, // scale factor applied to the diameter
+      diameterScale: 2, // scale factor applied to the diameter
       massSettable: true, // can the mass of this body be set by the control panel?
       massReadoutBelow: true, // should the mass label appear below the body to prevent occlusion?
       orbitalCenter: new Vector2( 0, 0 ), // orbital center for the body
-      maxPathLength: 1400000000, // max path length for the body in km (should only be used if the body is too close to the center)
-      pathLengthLimit: 6000, // limit on the number of points in the path
-      rotationPeriod: null // period of body rotation, in seconds - null rotation period will prevent rotation
+      maxPathLength: 144400000000, // max path length for the body in km (should only be used if the body is too close to the center)
+      pathLengthLimit: 9000, // limit on the number of points in the path
+      rotationPeriod: 1 // period of body rotation, in seconds - null rotation period will prevent rotation
     }, options );
 
     var diameter = ( bodyConfiguration.radius * 2 ) * options.diameterScale;
@@ -85,7 +85,7 @@ define( function( require ) {
     this.massSettable = options.massSettable; // @public (read-only)
 
     // @public number of samples in the path before it starts erasing (fading out from the back)
-    this.maxPathLength = 0;
+    this.maxPathLength = 9000;
 
     // @public - total length of the current path
     this.pathLength = 0;
